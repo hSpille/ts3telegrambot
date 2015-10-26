@@ -3,15 +3,18 @@ package main
 import (
 	"fmt"
 	"github.com/BurntSushi/toml"
+	"github.com/Syfaro/telegram-bot-api"
 	"github.com/toqueteos/ts3"
+	"log"
 	"strings"
 	"time"
 )
 
 type tomlConfig struct {
-	Tsuser   string
-	Tspasswd string
-	Tsurl    string
+	Tsuser          string
+	Tspasswd        string
+	Tsurl           string
+	Telegrammapikey string
 }
 
 func main() {
@@ -20,18 +23,23 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("Connecting to TS3 Server at: %s \n", config.Tsurl)
-	conn, err := ts3.Dial(config.Tsurl, true)
+	tgBot, err := tgbotapi.NewBotAPI(config.Telegrammapikey)
+	if err != nil {
+		log.Panic(err)
+	}
+	tgBot.Debug = false
+	log.Printf("Telegramm Bot authorized on account %s", tgBot.Self.UserName)
+	log.Printf("Connecting to TS3 Server at: %s \n", config.Tsurl)
+	tsConn, err := ts3.Dial(config.Tsurl, true)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Connected!")
-	defer conn.Close()
 
-	bot(conn, config.Tsuser, config.Tspasswd)
+	defer tsConn.Close()
+	tsBot(tsConn, config.Tsuser, config.Tspasswd)
 }
 
-func bot(conn *ts3.Conn, user string, passwd string) {
+func tsBot(conn *ts3.Conn, user string, passwd string) {
 	defer conn.Cmd("quit")
 	connectionCommand := "login " + user + " " + passwd
 	var cmds = []string{"version", connectionCommand, "use 1"}
@@ -42,14 +50,14 @@ func bot(conn *ts3.Conn, user string, passwd string) {
 		time.Sleep(500 * time.Millisecond)
 	}
 	r, _ := conn.Cmd("clientlist")
-	fmt.Println("Response: ", r)
+	log.Println("Response: ", r)
 	playerLine := strings.Split(r, "|")
 	for pl := range playerLine {
 		parts := strings.Split(playerLine[pl], " ")
 		for i := range parts {
 			if strings.Contains(parts[i], "client_nickname") {
 				user := strings.Split(parts[i], "=")[1]
-				fmt.Println("Found a user ", user)
+				log.Println("Found a user ", user)
 			}
 		}
 	}
