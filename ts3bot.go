@@ -37,10 +37,39 @@ func main() {
 	}
 
 	defer tsConn.Close()
-	onlineUser := tsBot(tsConn, config.Tsuser, config.Tspasswd)
-	msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v", onlineUser))
-	// msg.ReplyToMessageID = update.Message.MessageID
-	tgBot.SendMessage(msg)
+	var oldState []string
+	var newState []string
+	for {
+		onlineUsers := tsBot(tsConn, config.Tsuser, config.Tspasswd)
+		log.Println("User: ", onlineUsers)
+		for _, onlineUser := range onlineUsers {
+			if !contains(oldState, onlineUser) {
+				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("Player joined: ", onlineUser))
+				tgBot.SendMessage(msg)
+				time.Sleep(50 * time.Millisecond)
+				newState = append(newState, onlineUser)
+			}
+		}
+		for _, lastOnlineGamers := range oldState {
+			if !contains(newState, lastOnlineGamers) {
+				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("Player left: ", lastOnlineGamers))
+				tgBot.SendMessage(msg)
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+		oldState = newState
+		// msg.ReplyToMessageID = update.Message.MessageID
+		time.Sleep(1000 * time.Millisecond)
+	}
+}
+
+func contains(slice []string, elem string) bool {
+	for _, e := range slice {
+		if e == elem {
+			return true
+		}
+	}
+	return false
 }
 
 func tsBot(conn *ts3.Conn, user string, passwd string) []string {
@@ -59,7 +88,7 @@ func tsBot(conn *ts3.Conn, user string, passwd string) []string {
 	var toReturn []string
 	for pl := range playerLine {
 		if strings.Contains(playerLine[pl], "client_type=1") {
-			// Skip this client.
+			log.Println("Skipping " + playerLine[pl])
 			continue
 		}
 		parts := strings.Split(playerLine[pl], " ")
