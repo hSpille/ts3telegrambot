@@ -15,6 +15,7 @@ type tomlConfig struct {
 	Tspasswd        string
 	Tsurl           string
 	Telegrammapikey string
+	Telegrammchatid int
 }
 
 func main() {
@@ -36,10 +37,13 @@ func main() {
 	}
 
 	defer tsConn.Close()
-	tsBot(tsConn, config.Tsuser, config.Tspasswd)
+	onlineUser := tsBot(tsConn, config.Tsuser, config.Tspasswd)
+	msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v", onlineUser))
+	// msg.ReplyToMessageID = update.Message.MessageID
+	tgBot.SendMessage(msg)
 }
 
-func tsBot(conn *ts3.Conn, user string, passwd string) {
+func tsBot(conn *ts3.Conn, user string, passwd string) []string {
 	defer conn.Cmd("quit")
 	connectionCommand := "login " + user + " " + passwd
 	var cmds = []string{"version", connectionCommand, "use 1"}
@@ -52,13 +56,20 @@ func tsBot(conn *ts3.Conn, user string, passwd string) {
 	r, _ := conn.Cmd("clientlist")
 	log.Println("Response: ", r)
 	playerLine := strings.Split(r, "|")
+	var toReturn []string
 	for pl := range playerLine {
+		if strings.Contains(playerLine[pl], "client_type=1") {
+			// Skip this client.
+			continue
+		}
 		parts := strings.Split(playerLine[pl], " ")
 		for i := range parts {
 			if strings.Contains(parts[i], "client_nickname") {
 				user := strings.Split(parts[i], "=")[1]
 				log.Println("Found a user ", user)
+				toReturn = append(toReturn, user)
 			}
 		}
 	}
+	return toReturn
 }
