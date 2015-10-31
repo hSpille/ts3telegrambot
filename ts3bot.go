@@ -60,8 +60,7 @@ func main() {
 		}
 		oldState = onlineUsers
 		newState = newState[:0]
-		// msg.ReplyToMessageID = update.Message.MessageID
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(60000 * time.Millisecond)
 	}
 
 }
