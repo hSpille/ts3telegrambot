@@ -36,31 +36,34 @@ func main() {
 		panic(err)
 	}
 
+	defer tsConn.Cmd("quit")
 	defer tsConn.Close()
 	var oldState []string
 	var newState []string
 	for {
 		onlineUsers := tsBot(tsConn, config.Tsuser, config.Tspasswd)
-		log.Println("User: ", onlineUsers)
 		for _, onlineUser := range onlineUsers {
 			if !contains(oldState, onlineUser) {
-				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("Player joined: ", onlineUser))
+				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v im Teamspeak!", onlineUser))
 				tgBot.SendMessage(msg)
 				time.Sleep(50 * time.Millisecond)
 				newState = append(newState, onlineUser)
 			}
 		}
-		for _, lastOnlineGamers := range oldState {
-			if !contains(newState, lastOnlineGamers) {
-				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("Player left: ", lastOnlineGamers))
+		for _, onlineUser := range oldState {
+			if !contains(onlineUsers, onlineUser) {
+				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v hat Teamspeak verlassen ", onlineUser))
 				tgBot.SendMessage(msg)
 				time.Sleep(50 * time.Millisecond)
 			}
+
 		}
-		oldState = newState
+		oldState = onlineUsers
+		newState = newState[:0]
 		// msg.ReplyToMessageID = update.Message.MessageID
 		time.Sleep(1000 * time.Millisecond)
 	}
+
 }
 
 func contains(slice []string, elem string) bool {
@@ -73,7 +76,6 @@ func contains(slice []string, elem string) bool {
 }
 
 func tsBot(conn *ts3.Conn, user string, passwd string) []string {
-	defer conn.Cmd("quit")
 	connectionCommand := "login " + user + " " + passwd
 	var cmds = []string{"version", connectionCommand, "use 1"}
 
