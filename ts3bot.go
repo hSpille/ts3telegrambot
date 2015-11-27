@@ -35,6 +35,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	logins := make(map[string]time.Time)
 
 	defer tsConn.Cmd("quit")
 	defer tsConn.Close()
@@ -45,15 +46,17 @@ func main() {
 		for _, onlineUser := range onlineUsers {
 			if !contains(oldState, onlineUser) {
 				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v im Teamspeak!", onlineUser))
-				tgBot.SendMessage(msg)
+				logins[onlineUser] = time.Now()
+				tgBot.Send(msg)
 				time.Sleep(50 * time.Millisecond)
 				newState = append(newState, onlineUser)
 			}
 		}
 		for _, onlineUser := range oldState {
 			if !contains(onlineUsers, onlineUser) {
-				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v hat Teamspeak verlassen ", onlineUser))
-				tgBot.SendMessage(msg)
+				duration := time.Since(logins[onlineUser])
+				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v hat Teamspeak verlassen nach %v", onlineUser, duration))
+				tgBot.Send(msg)
 				time.Sleep(50 * time.Millisecond)
 			}
 
