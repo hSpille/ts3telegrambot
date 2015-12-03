@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/Syfaro/telegram-bot-api"
 	"github.com/toqueteos/ts3"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -16,10 +18,12 @@ type tomlConfig struct {
 	Tsurl           string
 	Telegrammapikey string
 	Telegrammchatid int
+	Dbfilename      string
 }
 
+var config tomlConfig
+
 func main() {
-	var config tomlConfig
 	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
 		fmt.Println(err)
 		return
@@ -55,6 +59,7 @@ func main() {
 		for _, onlineUser := range oldState {
 			if !contains(onlineUsers, onlineUser) {
 				duration := time.Since(logins[onlineUser])
+				storeTime(onlineUser, duration)
 				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v hat Teamspeak verlassen nach %v", onlineUser, duration))
 				tgBot.Send(msg)
 				time.Sleep(50 * time.Millisecond)
@@ -105,4 +110,64 @@ func tsBot(conn *ts3.Conn, user string, passwd string) []string {
 		}
 	}
 	return toReturn
+}
+
+func storeTime(user string, duration time.Duration) {
+	totalTimes := readFile()
+
+	var err error
+
+	if existsFile("db.json") {
+		err = os.Remove("db.json")
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+
+	file, err := os.OpenFile("db.json", os.O_WRONLY|os.O_CREATE, 0777)
+	if err != nil {
+		log.Panic(err)
+	}
+	enc := json.NewEncoder(file)
+	timeInDb, ok := totalTimes[user]
+	if !ok {
+		timeInDb = time.Time{}
+	}
+	totalTimes[user] = timeInDb.Add(duration)
+	err = enc.Encode(totalTimes)
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+func existsFile(filename string) bool {
+	_, err := os.Stat(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		log.Panic(err)
+	}
+	return true
+}
+
+/*
+ * Liefert leere map, wenn keine Datei gefunden.
+ */
+func readFile() map[string]time.Time {
+	totalTimes := make(map[string]time.Time)
+	file, err := os.Open("db.json")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return totalTimes
+		}
+		log.Panic(err)
+	}
+	defer file.Close()
+	dec := json.NewDecoder(file)
+	err = dec.Decode(&totalTimes)
+	if err != nil {
+		log.Println("DB Decode fehlerhaft: ", err)
+	}
+	return totalTimes
 }
