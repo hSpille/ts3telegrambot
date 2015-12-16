@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"ts3bot/tsstatus"
 )
 
 type tomlConfig struct {
@@ -39,37 +40,43 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	logins := make(map[string]time.Time)
+	//logins := make(map[string]time.Time)
 
 	defer tsConn.Cmd("quit")
 	defer tsConn.Close()
-	var oldState []string
-	var newState []string
-	for {
-		onlineUsers := tsBot(tsConn, config.Tsuser, config.Tspasswd)
-		for _, onlineUser := range onlineUsers {
-			if !contains(oldState, onlineUser) {
-				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v im Teamspeak!", onlineUser))
-				logins[onlineUser] = time.Now()
-				tgBot.Send(msg)
-				time.Sleep(50 * time.Millisecond)
-				newState = append(newState, onlineUser)
-			}
-		}
-		for _, onlineUser := range oldState {
-			if !contains(onlineUsers, onlineUser) {
-				duration := time.Since(logins[onlineUser])
-				storeTime(onlineUser, duration)
-				msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v hat Teamspeak verlassen nach %v", onlineUser, duration))
-				tgBot.Send(msg)
-				time.Sleep(50 * time.Millisecond)
-			}
-
-		}
-		oldState = onlineUsers
-		newState = newState[:0]
-		time.Sleep(60000 * time.Millisecond)
+	//var oldState []string
+	//var newState []string
+	status := tsstatus.NewStatus(config.Tsurl, config.Tsuser, config.Tspasswd)
+	c := status.GetChan()
+	for event := range c {
+		log.Println(event.Typ)
+		log.Println(event.User)
 	}
+	// for {
+	// 	onlineUsers := tsBot(tsConn, config.Tsuser, config.Tspasswd)
+	// 	for _, onlineUser := range onlineUsers {
+	// 		if !contains(oldState, onlineUser) {
+	// 			msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v im Teamspeak!", onlineUser))
+	// 			logins[onlineUser] = time.Now()
+	// 			tgBot.Send(msg)
+	// 			time.Sleep(50 * time.Millisecond)
+	// 			newState = append(newState, onlineUser)
+	// 		}
+	// 	}
+	// 	for _, onlineUser := range oldState {
+	// 		if !contains(onlineUsers, onlineUser) {
+	// 			duration := time.Since(logins[onlineUser])
+	// 			storeTime(onlineUser, duration)
+	// 			msg := tgbotapi.NewMessage(config.Telegrammchatid, fmt.Sprintf("%v hat Teamspeak verlassen nach %v", onlineUser, duration))
+	// 			tgBot.Send(msg)
+	// 			time.Sleep(50 * time.Millisecond)
+	// 		}
+
+	// 	}
+	// 	oldState = onlineUsers
+	// 	newState = newState[:0]
+	// 	time.Sleep(60000 * time.Millisecond)
+	// }
 
 }
 
