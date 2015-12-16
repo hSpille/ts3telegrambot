@@ -33,7 +33,7 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	tgBot.Debug = false
+	tgBot.Debug = true
 	log.Printf("Telegramm Bot authorized on account %s", tgBot.Self.UserName)
 	log.Printf("Connecting to TS3 Server at: %s \n", config.Tsurl)
 	tsConn, err := ts3.Dial(config.Tsurl, true)
@@ -45,12 +45,36 @@ func main() {
 	defer tsConn.Cmd("quit")
 	defer tsConn.Close()
 	//var oldState []string
-	//var newState []string
+	var state []string
 	status := tsstatus.NewStatus(config.Tsurl, config.Tsuser, config.Tspasswd)
 	c := status.GetChan()
 	for event := range c {
-		log.Println(event.Typ)
-		log.Println(event.User)
+		log.Println("Event-Typ:", event.Typ)
+		if strings.Compare("notifycliententerview", event.Typ) == 0 {
+			log.Println("Player joined")
+			parts := strings.Split(event.User, " ")
+			for _, part := range parts {
+				if strings.Contains(part, "client_nickname=") {
+					log.Println("Part:" + part)
+					user := strings.Split(part, "=")[1]
+					log.Println("Found a user ", user)
+					state = append(state, user)
+				}
+			}
+		}
+		if strings.Compare("notifyclientleftview", event.Typ) == 0 {
+			log.Println("Player joined")
+			parts := strings.Split(event.User, " ")
+			for _, part := range parts {
+				if strings.Contains(part, "client_nickname=") {
+					log.Println("Part:" + part)
+					user := strings.Split(part, "=")[1]
+					log.Println("Found a user ", user)
+					//remove player!
+				}
+			}
+		}
+		log.Println("Online currently: ", state)
 	}
 	// for {
 	// 	onlineUsers := tsBot(tsConn, config.Tsuser, config.Tspasswd)

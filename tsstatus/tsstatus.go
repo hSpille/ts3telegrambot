@@ -42,13 +42,10 @@ func (s *TsStatus) start(conn *ts3.Conn, user, passwd string) {
 	time.Sleep(500 * time.Millisecond)
 	r, _ = conn.Cmd("servernotifyregister event=server ")
 	conn.NotifyFunc(func(x, y string) {
-		log.Println("callback called")
-		log.Println(x)
-		log.Println(y)
-
+		log.Println("Notify: " + x)
 		event := Event{
-			Typ:  "tüdel",
-			User: "Wumpel",
+			Typ:  x,
+			User: y,
 		}
 		s.events <- event
 	})
